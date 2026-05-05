@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPO Bonus/Malus Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto bg-white p-6 rounded-xl shadow-md">
+        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">BPO B/M Structure Calculator</h1>
+        
+        <!-- Productivity Toggle -->
+        <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+            <label class="block font-semibold mb-2">Consider Productivity for this month?</label>
+            <select id="includeProd" class="w-full p-2 border rounded" onchange="calculate()">
+                <option value="yes">Yes</option>
+                <option value="no">No (Distribute 5% weight to others)</option>
+            </select>
+        </div>
+
+        <div class="space-y-4">
+            <!-- Csat -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Csat (%)</label>
+                <input type="number" id="csat" step="0.1" placeholder="e.g. 78" class="w-full p-2 border rounded" oninput="calculate()">
+            </div>
+            <!-- Rsat -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Rsat (%)</label>
+                <input type="number" id="rsat" step="0.1" placeholder="e.g. 82" class="w-full p-2 border rounded" oninput="calculate()">
+            </div>
+            <!-- Vsat -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Vsat (%)</label>
+                <input type="number" id="vsat" step="0.1" placeholder="e.g. 85" class="w-full p-2 border rounded" oninput="calculate()">
+            </div>
+            <!-- Productivity -->
+            <div id="prodContainer">
+                <label class="block text-sm font-medium text-gray-700">Productivity (Score)</label>
+                <input type="number" id="prod" step="0.1" placeholder="e.g. 8.8" class="w-full p-2 border rounded" oninput="calculate()">
+            </div>
+            <!-- Compliance -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Compliance (%)</label>
+                <input type="number" id="comp" step="0.1" placeholder="e.g. 95" class="w-full p-2 border rounded" oninput="calculate()">
+            </div>
+        </div>
+
+        <div class="mt-8 p-6 bg-gray-800 text-white rounded-lg text-center">
+            <div class="text-sm uppercase tracking-widest opacity-75">Final Result</div>
+            <div id="result" class="text-4xl font-bold mt-2">0.00%</div>
+        </div>
+    </div>
+
+    <script>
+        function getImpact(val, thresholds) {
+            if (val === null || isNaN(val)) return 0;
+            if (val < thresholds[0]) return -0.05;
+            if (val <= thresholds[1]) return -0.02;
+            if (val <= thresholds[2]) return 0;
+            if (val <= thresholds[3]) return 0.02;
+            return 0.05;
+        }
+
+        function calculate() {
+            const includeProd = document.getElementById('includeProd').value === 'yes';
+            document.getElementById('prodContainer').style.opacity = includeProd ? '1' : '0.4';
+            document.getElementById('prod').disabled = !includeProd;
+
+            // Base Weights
+            let weights = { csat: 0.30, rsat: 0.25, vsat: 0.25, prod: 0.05, comp: 0.15 };
+
+            if (!includeProd) {
+                const redistribution = 0.05 / 4;
+                weights.csat += redistribution;
+                weights.rsat += redistribution;
+                weights.vsat += redistribution;
+                weights.comp += redistribution;
+                weights.prod = 0;
+            }
+
+            const inputs = {
+                csat: parseFloat(document.getElementById('csat').value),
+                rsat: parseFloat(document.getElementById('rsat').value),
+                vsat: parseFloat(document.getElementById('vsat').value),
+                prod: parseFloat(document.getElementById('prod').value),
+                comp: parseFloat(document.getElementById('comp').value)
+            };
+
+            const thresholds = {
+                csat: [73, 75.9, 79.9, 82],
+                rsat: [77, 79.9, 82.9, 85],
+                vsat: [83, 84.9, 86.9, 88],
+                prod: [7.6, 8.7, 8.8, 9.9],
+                comp: [93, 94.9, 95.9, 97]
+            };
+
+            let finalBM = 0;
+            for (let key in weights) {
+                if (weights[key] > 0) {
+                    finalBM += getImpact(inputs[key], thresholds[key]) * weights[key];
+                }
+            }
+
+            const resultEl = document.getElementById('result');
+            const percentResult = (finalBM * 100).toFixed(2);
+            resultEl.innerText = (percentResult > 0 ? "+" : "") + percentResult + "%";
+            
+            // Color coding
+            if (finalBM > 0) resultEl.className = "text-4xl font-bold mt-2 text-green-400";
+            else if (finalBM < 0) resultEl.className = "text-4xl font-bold mt-2 text-red-400";
+            else resultEl.className = "text-4xl font-bold mt-2 text-white";
+        }
+    </script>
+</body>
+</html>
